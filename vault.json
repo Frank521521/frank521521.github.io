@@ -1,0 +1,1 @@
+{"version":1,"algorithm":"AES-256-GCM","kdf":"PBKDF2-SHA256","iterations":600000,"salt":"F3VesuxXPKA5V9ttms2VIaU6yh+0faO3EKgvVAZIs0c=","index":"vault/index.bin"}
