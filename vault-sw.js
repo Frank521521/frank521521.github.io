@@ -36,10 +36,10 @@ async function decryptFile(path,s){
   return clear;
  })().finally(()=>pending.delete(f.object));pending.set(f.object,task);return task;
 }
-async function serve(request,url){
+async function serve(request,url,assetPath=null){
  const s=await requireSession();
  if(!s)return new Response('请返回入口输入阅读口令。',{status:401,headers:{'Content-Type':'text/plain;charset=utf-8','Cache-Control':'no-store'}});
- let path;try{path=decodeURIComponent(url.pathname.slice(BOOK.length))||'index.html'}catch{return new Response('Not found',{status:404})}
+ let path;try{path=decodeURIComponent(assetPath??url.pathname.slice(BOOK.length))||'index.html'}catch{return new Response('Not found',{status:404})}
  const file=s.manifest.files[path];if(!file)return new Response('Not found',{status:404});
  if(!['GET','HEAD'].includes(request.method))return new Response('Method not allowed',{status:405});
  try{
@@ -57,4 +57,10 @@ async function serve(request,url){
   return new Response(request.method==='HEAD'?null:data,{status,headers:h});
  }catch{return new Response('资料暂未载入，请回到入口重新解锁或刷新重试。',{status:503,headers:{'Content-Type':'text/plain;charset=utf-8','Cache-Control':'no-store'}})}
 }
-self.addEventListener('fetch',event=>{const url=new URL(event.request.url);if(url.origin===ROOT.origin&&url.pathname.startsWith(BOOK))event.respondWith(serve(event.request,url))});
+self.addEventListener('fetch',event=>{
+ const url=new URL(event.request.url);if(url.origin!==ROOT.origin)return;
+ if(url.pathname.startsWith(BOOK))event.respondWith(serve(event.request,url));
+ // Older archive records contain origin-relative asset links. Resolve them
+ // through the same authenticated, in-memory decryptor as /book/ resources.
+ else if(url.pathname.startsWith('/assets/'))event.respondWith(serve(event.request,url,url.pathname.slice(1)));
+});
