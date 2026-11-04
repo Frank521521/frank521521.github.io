@@ -1,7 +1,7 @@
 const $=s=>document.querySelector(s),enc=new TextEncoder();
 let session=null,worker=null;
 const bytes=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
-async function rpc(message,target=worker){
+async function rpc(message,target=navigator.serviceWorker.controller||worker){
  if(!target)throw Error('浏览器尚未准备好，请稍后再试。');
  return new Promise((resolve,reject)=>{const c=new MessageChannel(),timer=setTimeout(()=>reject(Error('浏览器响应超时，请刷新重试。')),15000);c.port1.onmessage=({data})=>{clearTimeout(timer);c.port1.close();data.ok?resolve(data):reject(Error(data.error||'解锁未完成。'))};target.postMessage(message,[c.port2])});
 }
@@ -13,6 +13,10 @@ const ready=(async()=>{
  worker=navigator.serviceWorker.controller;
 })();
 ready.catch(e=>{$('#status').textContent=e.message;$('#open').disabled=true});
+navigator.serviceWorker?.addEventListener('controllerchange',()=>{
+ worker=navigator.serviceWorker.controller;
+ if(worker&&session)worker.postMessage({type:'restore',...session});
+});
 navigator.serviceWorker?.addEventListener('message',event=>{
  if(event.data?.type==='need-session'&&session)event.source.postMessage({type:'restore',...session});
 });
